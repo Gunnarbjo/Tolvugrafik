@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-	  <meta charset="utf-8">
-	  <link rel="icon" href="/animated-centipede.jpg">
-		<title>Centipede</title>
-		<style>
-			body { margin: 0; }
-		</style>
-	</head>
-	<body>
-		<script type="module" src="/main.js"></script>
-	</body>
+  <head>
+	<meta charset="utf-8">
+	<link rel="icon" href="/animated-centipede.jpg">
+	<title>Centipede</title>
+	<style>
+	  body { margin: 0; }
+	  .toggle-button {
+		  position: fixed;
+		  top: 50%; /* Center vertically */
+		  right: 10%; /* 10px from the right edge */
+		  z-index: 1000; /* Make sure it's above other elements */
+		  }
+	</style>
+  </head>
+  <body>
+	<button class="toggle-button">Camera</button>
+	<script type="module" src="/main.js"></script>
+  </body>
 </html>
