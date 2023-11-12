@@ -4,14 +4,15 @@ let score = 0;
 let oldPlayerPosition = new THREE.Vector3(); // Initialize with a default position
 const lasers = []; // Array to keep track of lasers
 const mushrooms = []; // Array to keep track of mushrooms
+
 const centipedeSpheres = [];
+
 const minMushrooms = 14; // Minimum number of mushrooms
 const maxMushrooms = 20; // Maximum number of mushrooms
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 const camera2 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-
 
 // Function to toggle between camera and camera2
 let activeCamera = camera;
@@ -96,6 +97,7 @@ function createCentipede(){
 }
 
 createCentipede();
+
 
 
 // Creating the mushrooms
@@ -330,8 +332,6 @@ function replenishMushroomsIfNeeded() {
 function updateScoreDisplay() {
     document.getElementById('scoreDisplay').innerText = 'Score: ' + score;
 }
-
-
 
 
 // Function to animate everything
