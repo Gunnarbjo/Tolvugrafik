@@ -4,12 +4,14 @@ let score = 0;
 let oldPlayerPosition = new THREE.Vector3(); // Initialize with a default position
 const lasers = []; // Array to keep track of lasers
 const mushrooms = []; // Array to keep track of mushrooms
+const centipedeSpheres = [];
 const minMushrooms = 14; // Minimum number of mushrooms
 const maxMushrooms = 20; // Maximum number of mushrooms
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 const camera2 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
 
 // Function to toggle between camera and camera2
 let activeCamera = camera;
@@ -60,6 +62,45 @@ player.position.z = 0;
 scene.add( player );
 
 camera.position.z = 5;
+
+
+const light = new THREE.PointLight(0xffffff, 70, 100, 1.7);
+light.position.set(0, 10, 10);
+scene.add(light);
+
+function createSphere(x, y){
+    const sphereGeometry = new THREE.SphereGeometry( 0.25, 64, 64 ); 
+    const material = new THREE.MeshStandardMaterial( { color: '#e81809'} ); 
+    const mesh = new THREE.Mesh( sphereGeometry, material );
+    mesh.position.x = x;
+    mesh.position.y = y;
+    return mesh;
+}
+
+// createSphere((-(canvasInnerWidth / 100) / 2) - 2, (canvasInnerHeight / 100) * 0.4);
+
+function createCentipede(){
+    const numSphere = 6;
+
+    // Start position for last Sphere
+    const lastX = (-(canvasInnerWidth / 100) / 2) - 2;
+    const lastY = (canvasInnerHeight / 100) * 0.4; 
+
+    for (let i = 0; i < numSphere; i+=1) {
+        const centipede = createSphere(lastX + i*0.5, lastY);
+        scene.add( centipede );
+        centipedeSpheres.push(centipede);
+    }
+
+    
+}
+
+createCentipede();
+
+
+function updateCentipedePosition(){
+    
+}
 
 // Creating the mushrooms
 function createMushroom() {
@@ -195,6 +236,17 @@ function checkBoundsAndResetPlayer() {
     }
 }
 
+// Collision between Centipede and Mushroom
+function checkCentipedeMushroomCollisions(){
+
+}
+
+// Collision between Centipede and Laser
+function checkCentipedeLaserCollision(){
+
+}
+
+
 // Check to see if you have hit a mushroom with a laser
 function checkLaserMushroomCollisions() {
     for (let i = lasers.length - 1; i >= 0; i--) {
@@ -295,6 +347,8 @@ function updateScoreDisplay() {
 }
 
 
+
+
 // Function to animate everything
 function animate() {
 	requestAnimationFrame( animate );
@@ -302,6 +356,7 @@ function animate() {
         let laser = lasers[i];
         laser.position.y += 0.1; // Adjust speed as necessary
     }
+     
 	// Check to see if mushrooms and laser collide
 	checkLaserMushroomCollisions();
 	// Check and reset player position if out of bounds
