@@ -6,6 +6,10 @@ const lasers = []; // Array to keep track of lasers
 const mushrooms = []; // Array to keep track of mushrooms
 
 const centipedeSpheres = [];
+// Initial direction and speed
+let centipedeSpeed = 0.05; // Adjust as necessary
+let centipedeBaseSpeed = 0.05;
+let centipedeDirection = new THREE.Vector3(1, 0, 0); // Moving right initially
 
 const minMushrooms = 14; // Minimum number of mushrooms
 const maxMushrooms = 20; // Maximum number of mushrooms
@@ -71,7 +75,7 @@ scene.add(light);
 
 function createSphere(x, y){
     const sphereGeometry = new THREE.SphereGeometry( 0.25, 64, 64 ); 
-    const material = new THREE.MeshStandardMaterial( { color: '#e81809'} ); 
+    const material = new THREE.MeshStandardMaterial( { color: 0xe81809} ); 
     const mesh = new THREE.Mesh( sphereGeometry, material );
     mesh.position.x = x;
     mesh.position.y = y;
@@ -93,7 +97,7 @@ function createCentipede(){
         centipedeSpheres.push(centipede);
     }
 
-    
+    centipedeSpeed = centipedeBaseSpeed;
 }
 
 createCentipede();
@@ -128,7 +132,7 @@ function createMushroom() {
     mushroom.add(stem);
 
     // Rotate the mushroom 90 degrees (π/2 radians) on the x-axis
-    mushroom.rotation.x = Math.PI / 2;
+     mushroom.rotation.x = Math.PI / 2;
 
 	mushroom.hits = 0; // To track the number if hits on the mushroom
 
@@ -155,7 +159,7 @@ function createRandomMushrooms() {
         do {
             x = Math.random() * (maxX - minX) + minX;
             y = Math.random() * (maxY - minY) + minY;
-            overlap = isOverlapping(x, y, mushrooms, overlapThreshold);
+            overlap = isOverlapping(x, y, mushrooms, centipedeSpheres);
         } while (overlap); // Keep generating new positions until no overlap is found
 
         const mushroom = createMushroom();
@@ -164,8 +168,6 @@ function createRandomMushrooms() {
         mushrooms.push(mushroom); // Add each created mushroom to the array
     }
 }
-
-createRandomMushrooms();
 
 createRandomMushrooms();
 
@@ -201,7 +203,7 @@ function addMushrooms(numberToAdd) {
         do {
             x = Math.random() * (maxX - minX) + minX;
             y = Math.random() * (maxY - minY) + minY;
-            overlap = isOverlapping(x, y, mushrooms, overlapThreshold);
+            overlap = isOverlapping(x, y, mushrooms, centipedeSpheres);
         } while (overlap); // Keep generating new positions until no overlap is found
 
         const mushroom = createMushroom();
@@ -278,13 +280,44 @@ function isCollision(laser, mushroom) {
 }
 
 // To check if a mushroom is placed at the same space as another
-function isOverlapping(newX, newY, existingMushrooms) {
+function isOverlapping(newX, newY, existingMushrooms, centipedeSpheres) {
     for (const mushroom of existingMushrooms) {
-        if (Math.abs(mushroom.position.x - newX) < 0.01 && Math.abs(mushroom.position.y - newY) < 0.01) {
+        if (Math.abs(mushroom.position.x - newX) < 0.5 && Math.abs(mushroom.position.y - newY) < 0.5) {
+            return true;
+        }
+    }
+    for (const sphere of centipedeSpheres) {
+        if (Math.abs(sphere.position.x - newX) < 0.5 && Math.abs(sphere.position.y - newY) < 0.5) {
             return true;
         }
     }
     return false;
+}
+function checkLaserCentipedeCollisions() {
+    for (let i = lasers.length - 1; i >= 0; i--) {
+        let laser = lasers[i];
+        for (let j = centipedeSpheres.length - 1; j >= 0; j--) {
+            let centipedeSegment = centipedeSpheres[j];
+            if (isCollisionCentipede(laser, centipedeSegment)) {
+                // Handle the collision
+                handleCentipedeSegmentHit(j);
+
+                // Remove laser from scene and array
+                scene.remove(laser);
+                lasers.splice(i, 1);
+
+                // Break out of the inner loop since the laser has been removed
+                break;
+            }
+        }
+    }
+}
+
+function isCollisionCentipede(laser, centipedeSegment) {
+    // You can use a similar logic to what you have for mushroom collision
+    const distance = laser.position.distanceTo(centipedeSegment.position);
+    const collisionThreshold = 0.5; // Adjust based on your segment size
+    return distance < collisionThreshold;
 }
 
 
@@ -294,13 +327,13 @@ function onDocumentKeyDown(event) {
     oldPlayerPosition.copy(player.position);
 	var keyCode = event.which;
 	// Arrow keys have the following keyCodes: 37 (left), 38 (up), 39 (right), 40 (down)
-	if (keyCode == 37) {
+	if (keyCode == 37 || keyCode == 65) {
 		player.position.x -= 0.3; // Move left
-	} else if (keyCode == 38) {
+	} else if (keyCode == 38 || keyCode == 87) {
 		player.position.y += 0.3; // Move up
-	} else if (keyCode == 39) {
+	} else if (keyCode == 39 || keyCode == 68) {
 		player.position.x += 0.3; // Move right
-	} else if (keyCode == 40) {
+	} else if (keyCode == 40 || keyCode == 83) {
 		player.position.y -= 0.3; // Move down
 	}
 	if (keyCode == 32) { // Spacebar
@@ -310,6 +343,77 @@ function onDocumentKeyDown(event) {
         lasers.push(laser);
     }
 
+}
+function updateCentipede() {
+    const ciw = canvasInnerWidth / 100;
+    const cih = canvasInnerHeight / 100;
+    
+    const minX = (-ciw / 2) - 2;
+    const maxX = (ciw / 2) + 2;
+    const minY = -2;
+    const maxY = cih;
+
+    let sphereDiameter = 0.25;
+    let upwardSpeed = 0.1; // Adjust the speed of upward movement
+
+    if (centipedeSpheres[0].position.y < minY) {
+        // Reset centipede to its initial position and orientation
+        resetCentipede();
+    } else {
+        // Update the position of each segment
+        for (let i = centipedeSpheres.length - 1; i >= 0; i--) {
+            if (i === 0) {
+                // Continuously move the head upwards
+				// centipedeSpheres[i].position.y += upwardSpeed;
+
+                // Check for mushroom collision
+                let collisionWithMushroom = checkCentipedeMushroomCollision(centipedeSpheres[i]);
+                if (collisionWithMushroom) {
+                    // Reverse X direction on collision
+                    centipedeDirection.setX(-centipedeDirection.x);
+	                centipedeSpheres[i].position.y -= upwardSpeed;
+                }
+
+                // Check for horizontal boundary collision
+                if (centipedeSpheres[i].position.x > maxX || centipedeSpheres[i].position.x < minX) {
+                    // Reverse X direction on boundary collision
+                    centipedeDirection.setX(-centipedeDirection.x);
+	                centipedeSpheres[i].position.y -= upwardSpeed;
+				}
+
+                // Apply horizontal movement
+                centipedeSpheres[i].position.x += centipedeDirection.x * centipedeSpeed;
+            } else {
+                // Following segments
+                let targetPosition = centipedeSpheres[i - 1].position.clone();
+                centipedeSpheres[i].position.lerp(targetPosition, 0.1);
+            }
+        }
+    }
+}
+
+function resetCentipede() {
+    // Start position for the first segment of the centipede
+    const startX = (-(canvasInnerWidth / 100) / 2) - 2;
+    const startY = (canvasInnerHeight / 100) * 0.4; 
+
+    // Reset each segment's position
+    for (let i = 0; i < centipedeSpheres.length; i++) {
+        centipedeSpheres[i].position.x = startX + i * 0.5;
+        centipedeSpheres[i].position.y = startY;
+    }
+
+    // Reset centipede's movement direction
+    centipedeDirection.set(1, 0, 0); // Assuming initial direction is towards the right
+}
+
+function checkCentipedeMushroomCollision(centipedeSegment) {
+    for (let mushroom of mushrooms) {
+        if (isCollision(centipedeSegment, mushroom)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Attach event listener to the document
@@ -331,7 +435,40 @@ function replenishMushroomsIfNeeded() {
 // Updates score
 function updateScoreDisplay() {
     document.getElementById('scoreDisplay').innerText = 'Score: ' + score;
+    // Check if score has reached a multiple of 100
+    if (score % 100 === 0 && score !== 0) {
+        centipedeBaseSpeed += 0.05;
+        updateCentipedeSpeed(); // Call a function to update the centipede's speed
+    }	
 }
+
+function handleCentipedeSegmentHit(segmentIndex) {
+    // Remove the hit segment and get the segment
+    const hitSegment = centipedeSpheres.splice(segmentIndex, 1)[0];
+    scene.remove(hitSegment);
+
+    // Update score based on which segment is hit
+    score += (segmentIndex === 0 || segmentIndex === centipedeSpheres.length) ? 100 : 10;
+    updateScoreDisplay();
+
+    // Check if the centipede is split into two
+    if (segmentIndex > 0 && segmentIndex < centipedeSpheres.length) {
+        // Create a new centipede from the remaining segments
+        const newCentipede = centipedeSpheres.splice(segmentIndex);
+        newCentipede.forEach(segment => scene.add(segment));
+        centipedeSpheres.push(...newCentipede); // Add the new centipede to the scene
+    }
+
+    // Respawn the centipede if all segments are destroyed
+    if (centipedeSpheres.length === 0) {
+        createCentipede();
+    }
+}
+
+function updateCentipedeSpeed() {
+    centipedeSpeed = centipedeBaseSpeed; // Update centipede speed
+}
+
 
 
 // Function to animate everything
@@ -343,9 +480,12 @@ function animate() {
     }
 	// Check to see if mushrooms and laser collide
 	checkLaserMushroomCollisions();
+	checkLaserCentipedeCollisions();
+	updateCentipede();
 	// Check and reset player position if out of bounds
 	checkBoundsAndResetPlayer();
 	renderer.render( scene, activeCamera );
 	const oldplayer = player.position;
+	console.log(centipedeSpeed);
 }
 animate();
