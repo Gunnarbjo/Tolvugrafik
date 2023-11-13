@@ -2,10 +2,10 @@ import * as THREE from 'three';
 
 let score = 0;
 let oldPlayerPosition = new THREE.Vector3(); // Initialize with a default position
-const lasers = []; // Array to keep track of lasers
-const mushrooms = []; // Array to keep track of mushrooms
+let lasers = []; // Array to keep track of lasers
+let mushrooms = []; // Array to keep track of mushrooms
 
-const centipedeSpheres = [];
+let centipedeSpheres = [];
 // Initial direction and speed
 let centipedeSpeed = 0.05; // Adjust as necessary
 let centipedeBaseSpeed = 0.05;
@@ -73,6 +73,41 @@ const light = new THREE.PointLight(0xffffff, 70, 100, 1.7);
 light.position.set(0, 10, 10);
 scene.add(light);
 
+function initGame() {
+    // Reset Player Position
+    player.position.set(0, (-1 * (canvasInnerWidth / 2) / 100) + playerHeightY * 10, 0);
+
+    // Reset Camera Position
+    camera.position.set(0, 0, 5);
+    activeCamera = camera;
+
+    // Reset Score
+    score = 0;
+    updateScoreDisplay();
+
+    // Clear and Create Centipede
+    centipedeSpheres.forEach(segment => scene.remove(segment));
+    centipedeSpheres = [];
+    createCentipede();
+	centipedeSpeed = 0.05;
+
+    // Clear and Create Mushrooms
+    mushrooms.forEach(mushroom => scene.remove(mushroom));
+    mushrooms = [];
+    createRandomMushrooms();
+
+    // Reset Centipede Speed
+    centipedeSpeed = centipedeBaseSpeed;
+
+    // Clear Lasers
+    lasers.forEach(laser => scene.remove(laser));
+    lasers = [];
+
+    // Hide Game Over Screen
+    document.getElementById('gameOverScreen').style.display = 'none';
+}
+
+
 function createSphere(x, y){
     const sphereGeometry = new THREE.SphereGeometry( 0.25, 64, 64 ); 
     const material = new THREE.MeshStandardMaterial( { color: 0xe81809} ); 
@@ -132,7 +167,7 @@ function createMushroom() {
     mushroom.add(stem);
 
     // Rotate the mushroom 90 degrees (π/2 radians) on the x-axis
-     mushroom.rotation.x = Math.PI / 2;
+    mushroom.rotation.x = Math.PI / 2;
 
 	mushroom.hits = 0; // To track the number if hits on the mushroom
 
@@ -350,7 +385,7 @@ function updateCentipede() {
     
     const minX = (-ciw / 2) - 2;
     const maxX = (ciw / 2) + 2;
-    const minY = -2;
+    const minY = -cih;
     const maxY = cih;
 
     let sphereDiameter = 0.25;
@@ -416,9 +451,80 @@ function checkCentipedeMushroomCollision(centipedeSegment) {
     return false;
 }
 
+function checkPlayerCentipedeCollision() {
+    for (const segment of centipedeSpheres) {
+        const distance = player.position.distanceTo(segment.position);
+        const collisionThreshold = 0.5; // Adjust as needed
+        if (distance < collisionThreshold) {
+            // Trigger the game over screen and logic
+            document.getElementById('gameOverScreen').style.display = 'block';
+            
+            // Stop the animation loop
+            cancelAnimationFrame(animate);
+
+            // Add event listener to the restart button
+            document.getElementById('restartButton').addEventListener('click', function() {
+                document.getElementById('gameOverScreen').style.display = 'none';
+
+                // Reset game state
+                // This includes resetting the player's position, score, centipede segments, etc.
+                initGame();
+
+                // Restart the animation loop
+        //        animate();
+            });
+
+            // Since a collision is detected, exit the function
+            return true;
+        }
+    }
+    return false;
+}
+
+
 // Attach event listener to the document
 document.addEventListener("keydown", onDocumentKeyDown, false);
 document.querySelector('.toggle-button').addEventListener('click', toggleCamera);
+
+
+
+function resetGameState() {
+    // Reset the player's position, score, and any other game states
+    player.position.set(0, 0, 0);
+    score = 0;
+    updateScoreDisplay();
+    
+    // Reset the centipedes
+    resetCentipedes();
+
+    // Remove all mushrooms and regenerate them
+    mushrooms.forEach(mushroom => scene.remove(mushroom));
+    mushrooms.length = 0;
+    createRandomMushrooms();
+
+    // Remove any remaining lasers
+    lasers.forEach(laser => scene.remove(laser));
+    lasers.length = 0;
+
+   
+}
+
+
+function resetCentipedes() {
+    // Remove each centipede segment from the scene
+    centipedeSpheres.forEach(segment => scene.remove(segment));
+
+    // Clear the centipedeSpheres array
+    centipedeSpheres.length = 0;
+
+    // Recreate the centipede
+    createCentipede();
+
+    // Reset the base speed of the centipede if needed
+    centipedeBaseSpeed = 0.05; // Reset to initial base speed
+	centipedeSpeed = 0.05;
+    updateCentipedeSpeed(); // Update the speed of the centipede
+}
 
 
 // Check if the mushroom count is low and add more
@@ -486,6 +592,12 @@ function animate() {
 	checkBoundsAndResetPlayer();
 	renderer.render( scene, activeCamera );
 	const oldplayer = player.position;
+	if (checkPlayerCentipedeCollision()) {
+        document.getElementById('gameOverScreen').style.display = 'block';
+        cancelAnimationFrame(animate); // Stop the animation loop
+    }
+
 	console.log(centipedeSpeed);
+
 }
 animate();
