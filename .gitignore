@@ -1,3 +1,6 @@
+
+node_modules
+
 /centipede/node_modules/*
 /centipede/package.json
 /centipede/package-lock.json
